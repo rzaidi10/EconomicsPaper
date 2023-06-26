@@ -23,7 +23,7 @@ header = {
 # 109 niche pages
 for i in range (1,109):
     # using cached form to avoid getting rejected
-	nicheURL = 'http://webcache.googleusercontent.com/search?q=cache:https://www.niche.com/colleges/search/best-colleges/?page='+str(i)
+	nicheURL = 'https://www.niche.com/colleges/search/best-colleges/?page='+str(i)
     nichePage = requests.get(nicheURL)
     soup = BeautifulSoup(nichePage.content,"html.parser")
     print("PAGE",i,":",nicheURL)
