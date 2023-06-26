@@ -4,7 +4,7 @@ from bs4 import BeautifulSoup
 import os
 
 # Define the URL to scrape
-url = "https://fred.stlouisfed.org/release/tables?rid=249&eid=259515&od=#"
+url = "https://fred.stlouisfed.org/release/tables?rid=249&eid=259515&od=2017-01-01#"
 
 # Send a GET request to the URL
 response = requests.get(url)
@@ -30,12 +30,12 @@ for row in table.find_all("tr"):
 
 # Define the path to save the CSV file
 desktop_path = os.path.expanduser("~/Desktop")
-csv_file_path = os.path.join(desktop_path, "2021_median_income.csv")
+csv_file_path = os.path.join(desktop_path, "2017_median_income.csv")
 
 # Write the data to the CSV file
 with open(csv_file_path, "w", newline="") as csvfile:
     writer = csv.writer(csvfile)
-    writer.writerow(["State", "2021"])  # Write the header
+    writer.writerow(["State", "2017"])  # Write the header
     writer.writerows(zip(states, median_incomes))  # Write the data rows
 
 print("Data has been scraped and saved as a CSV file on the desktop.")
