@@ -46,7 +46,8 @@ for i in range (1,109):
         href = link.get("href")
         if href and re.search(r"/colleges/\S+", href):
             if not link.find("h2", string="Sponsored Result"):
-                college_urls.append(href)
+		    if (href != 'https://www.niche.com/colleges/university-of-north-carolina-system/') and (href != 'https://www.niche.com/colleges/university-of-the-potomac-system/'):
+                	college_urls.append(href)
             else:
                 print("excluded" + href)
     #print("URLS:",college_urls)
