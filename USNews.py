@@ -1,48 +1,159 @@
+import re
 import requests
-from bs4 import BeautifulSoup
-import csv
-import os
 import pandas as pd
+from bs4 import BeautifulSoup
+import requests
+import urllib
 
-# Target URLs
-urls = ["https://www.usnews.com/best-colleges/rankings/national-universities",
-        "https://www.usnews.com/best-colleges/rankings/national-liberal-arts-colleges"]
 
-# Prepare for storing the scraped data
+
+# Define the URL of the website to scrape
+
+# data is a set of dictionaries of each college with all the info
 data = []
 
-# Loop over each URL
-for url in urls:
-    # Send a GET request
-    response = requests.get(url)
-    soup = BeautifulSoup(response.text, 'html.parser')
-    # Find the list of colleges
-    colleges = soup.select('.rankings-list-item')
-    # Loop over each college
-    for college in colleges:
-        # Extract and print the name of the college and its rank
-        name = college.select_one('.rankings-list-item__name').text.strip()
-        link = "https://www.usnews.com" + college.select_one('.rankings-list-item__link')['href']
-        # Follow the link to the college page and extract further details
-        college_response = requests.get(link)
-        college_soup = BeautifulSoup(college_response.text, 'html.parser')
-        # Extract tuition and fees, graduation rate, US news ranking, class size, acceptance rate, and state
-        tuition_fees_elem = college_soup.select_one('[data-testid="tuition-fees"]')
-        tuition_fees = tuition_fees_elem.text.strip() if tuition_fees_elem is not None else ""
-        graduation_rate_elem = college_soup.select_one('[data-testid="graduation-rate"]')
-        graduation_rate = graduation_rate_elem.text.strip() if graduation_rate_elem is not None else ""
-        acceptance_rate_elem = college_soup.select_one('[data-testid="acceptance-rate"]')
-        acceptance_rate = acceptance_rate_elem.text.strip() if acceptance_rate_elem is not None else ""
-        class_size_elem = college_soup.select_one('[data-testid="class-size"]')
-        class_size = class_size_elem.text.strip() if class_size_elem is not None else ""
-        state_elem = college_soup.select_one('.location')
-        state = state_elem.text.strip().split(",")[-1].strip() if state_elem is not None else ""
-        # Add the data to our storage
-        data.append([name, tuition_fees, graduation_rate, class_size, acceptance_rate, state])
-# Save the data to a CSV file
-df = pd.DataFrame(data, columns=['Name', 'Tuition and Fees', 'Graduation Rate', 'Class Size', 'Acceptance Rate', 'State'])
-# Sort by state
-df = df.sort_values('State')
-# Write the DataFrame to CSV
-output_path = os.path.join(os.path.expanduser("~razazaidi"), "Desktop", 'USNewsData.csv')
-df.to_csv(output_path, index=False, encoding='utf-8')
+# header is used to bypass error blockers (too many requests, etc.)
+# might need to find your own computer's user agent
+header = {
+    "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 13_4_1) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.5 Safari/605.1.15,",
+    
+    'referer':'https://www.niche.com/'
+    }
+
+# 109 niche pages
+for i in range (1,109):
+    # using cached form to avoid getting rejected
+	nicheURL = 'http://webcache.googleusercontent.com/search?q=cache:https://www.niche.com/colleges/search/best-colleges/?page='+str(i)
+    nichePage = requests.get(nicheURL)
+    soup = BeautifulSoup(nichePage.content,"html.parser")
+    print("PAGE",i,":",nicheURL)
+
+    #with open("/Users/arinjaff/Downloads/niche.html", 'rb') as fp:
+    # soup = BeautifulSoup(fp)
+
+        # Find all the links to college pages
+    college_links = soup.find_all("a", class_="search-result__link")
+
+
+    # popping ads out
+    college_links.pop(3)
+    college_links.pop(25)
+    college_links.pop(25)
+
+    # getting links
+    college_urls = []
+    for link in college_links:
+        href = link.get("href")
+        if href and re.search(r"/colleges/\S+", href):
+            if not link.find("h2", string="Sponsored Result"):
+                college_urls.append(href)
+            else:
+                print("excluded" + href)
+    #print("URLS:",college_urls)
+    for college_url in college_urls:
+        
+        print(college_url)
+
+        # using cache to avoid getting rejected from website
+        newUrl = "http://webcache.googleusercontent.com/search?q=cache:"+college_url
+        college_response = requests.get(newUrl,headers=header)
+
+        #print(college_response)
+        
+        college_response = requests.get(newUrl)
+        college_soup = BeautifulSoup(college_response.content, "html.parser")
+        #print(college_response.content)
+
+        #print(college_response.content)
+		
+		# getting college info
+        college = college_soup.find("div", class_="postcard__content postcard__content--primary").text.strip()
+
+		# getting college name (depending on format)
+        college_name = college.split("#")[0].strip()
+        college_name = college.split("This")[0].strip()
+
+        # Extract college rank
+        college_rank = college_urls.index(college_url)+1
+
+        # Extract state
+        state_match = re.search(r",\s*([A-Z]{2})", college)
+        state = state_match.group(1) if state_match else None
+
+        gradeTable = []
+        i = 0
+        trueCheck = True
+        while trueCheck:
+            #print("hi")
+            try:
+                gradeTable.append(college_soup.findAll("li",class_="ordered__list__bucket__item")[i].text.strip())
+                i = i+1
+            except:
+                trueCheck = False
+        grades_dict = {}
+        for item in gradeTable:
+            category, grade = item.split("grade\xa0")
+
+            grade = grade.replace(" minus", "-")  # Replace "minus" with "-"
+            grades_dict[category] = grade
+                            
+    #print(grades_dict)
+        try:
+            desc = college_soup.find("span",class_="bare-value").text.strip()
+                #  number of students
+            students_match = re.search(r"(\d{1,3}(?:,\d{3})*)(?: undergraduate)? students", desc)
+            if students_match:
+                number_of_students = students_match.group(1).replace(",", "")
+            else:
+                number_of_students = None
+
+            # popular majors
+            majors_match = re.search(r"majors include (.+?)\.", desc)
+            if majors_match:
+                popular_majors = [major.strip() for major in majors_match.group(1).split(",")]
+            else:
+                popular_majors = []
+
+            # acc rate
+            acceptance_rate_match = re.search(r"acceptance rate is ([\d.]+)%", desc)
+            if acceptance_rate_match:
+                acceptance_rate = float(acceptance_rate_match.group(1))
+            else:
+                acceptance_rate = None
+        except:
+            print("no desc")
+            number_of_students = None
+            acceptance_rate = None
+            popular_majors = []
+
+
+        accRate = college_soup.find("span",class_="scalar__value")
+        #print(accRate)
+
+
+        
+
+        # Extract other desired data fields here using BeautifulSoup and regex
+
+        data.append({
+            'College':college_name,
+            'Rank':college_rank,
+            'State':state,
+            'Grades': grades_dict,
+            'Students':number_of_students,
+            'Majors':popular_majors,
+            'Acceptance Rate':acceptance_rate
+
+        })
+
+# Create a Pandas DataFrame from the extracted data
+
+
+df = pd.DataFrame.from_dict(data)
+
+
+df.to_csv('niche_scraped_colleges.csv')
+
+
+# Output the DataFrame
+
