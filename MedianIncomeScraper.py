@@ -27,6 +27,7 @@ for row in table.find_all("tr"):
         states.append(state_element.text.strip())
         median_incomes.append(income_element.text.strip())
 
+
 # Define the path to save the CSV file
 desktop_path = os.path.expanduser("~/Desktop")
 csv_file_path = os.path.join(desktop_path, "2021_median_income.csv")
