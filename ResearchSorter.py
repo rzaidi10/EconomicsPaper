@@ -44,3 +44,4 @@ new_df = pd.DataFrame(list(state_expenditures.items()), columns=['State', '2021'
 # Save the new DataFrame to a csv file
 new_filepath = os.path.expanduser("~/Desktop/EconomicsPaper/State_Research.csv")
 new_df.to_csv(new_filepath, index=False)
+
