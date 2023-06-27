@@ -6,80 +6,85 @@ import requests
 import urllib
 
 
+## Stack Overflow ##
+
+
 
 # Define the URL of the website to scrape
 
-# data is a set of dictionaries of each college with all the info
+# Extract data from each college page
 data = []
-
-# header is used to bypass error blockers (too many requests, etc.)
-# might need to find your own computer's user agent
 header = {
     "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 13_4_1) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.5 Safari/605.1.15,",
-    
+    # might need to find your own user agent
     'referer':'https://www.niche.com/'
     }
 
-# 109 niche pages
+
 for i in range (1,109):
-    # using cached form to avoid getting rejected
 	nicheURL = 'https://www.niche.com/colleges/search/best-colleges/?page='+str(i)
-    nichePage = requests.get(nicheURL)
+    nichePage = requests.get(nicheURL,headers=header)
     soup = BeautifulSoup(nichePage.content,"html.parser")
-    print("PAGE",i,":",nicheURL)
+    
 
     #with open("/Users/arinjaff/Downloads/niche.html", 'rb') as fp:
-    # soup = BeautifulSoup(fp)
+     #   soup = BeautifulSoup(fp)
 
         # Find all the links to college pages
     college_links = soup.find_all("a", class_="search-result__link")
 
+    #print(college_links)
+    # Ads
 
-    # popping ads out
-    college_links.pop(3)
-    college_links.pop(25)
-    college_links.pop(25)
 
-    # getting links
     college_urls = []
     for link in college_links:
         href = link.get("href")
         if href and re.search(r"/colleges/\S+", href):
             if not link.find("h2", string="Sponsored Result"):
-		    if (href != 'https://www.niche.com/colleges/university-of-north-carolina-system/') and (href != 'https://www.niche.com/colleges/university-of-the-potomac-system/'):
-                	college_urls.append(href)
+                if (href != 'https://www.niche.com/colleges/university-of-north-carolina-system/') and (href != 'https://www.niche.com/colleges/university-of-the-potomac-system/'):
+                    college_urls.append(href)
             else:
                 print("excluded" + href)
     #print("URLS:",college_urls)
     for college_url in college_urls:
         
-        print(college_url)
+        print("CURRENT SCHOOL:",college_url)
 
-        # using cache to avoid getting rejected from website
-        newUrl = "http://webcache.googleusercontent.com/search?q=cache:"+college_url
+        
+        newUrl = 'http://webcache.googleusercontent.com/search?q=cache:'+college_url
         college_response = requests.get(newUrl,headers=header)
 
         #print(college_response)
         
         college_response = requests.get(newUrl)
         college_soup = BeautifulSoup(college_response.content, "html.parser")
-        #print(college_response.content)
+        
+        print(college_response.content)
 
         #print(college_response.content)
-		
-		# getting college info
-        college = college_soup.find("div", class_="postcard__content postcard__content--primary").text.strip()
 
-		# getting college name (depending on format)
-        college_name = college.split("#")[0].strip()
-        college_name = college.split("This")[0].strip()
+        
+        college = college_soup.find("div", class_="postcard__content postcard__content--primary")
+        if college is not None:
+            college = college.text.strip()
+            college_name = college.split("#")[0].strip()
+            college_name = college.split("This")[0].strip()
+            state_match = re.search(r",\s*([A-Z]{2})", college)
+            state = state_match if state_match else None
+        else:
+            print("hit captcha")
+            state = None
+
+
+        print("couldn't find college name")
+        college_name = college_url
 
         # Extract college rank
         college_rank = college_urls.index(college_url)+1
 
         # Extract state
-        state_match = re.search(r",\s*([A-Z]{2})", college)
-        state = state_match.group(1) if state_match else None
+
 
         gradeTable = []
         i = 0
@@ -153,7 +158,7 @@ for i in range (1,109):
 df = pd.DataFrame.from_dict(data)
 
 
-df.to_csv('niche_scraped_colleges.csv')
+df.to_csv('niche_colleges.csv')
 
 
 # Output the DataFrame
