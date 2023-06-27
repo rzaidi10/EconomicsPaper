@@ -7,8 +7,6 @@ import json
 
 # Your Mapbox API access token
 MAPBOX_TOKEN = 'pk.eyJ1IjoicnphaWRpIiwiYSI6ImNsamNkaWM1MzB1bmUzZHFyamh6ajUwN28ifQ.MfsDDOxgRYif0hAr3I94dw'
-
-
 def get_state(university):
     try:
         # Prepare API request
@@ -44,4 +42,3 @@ new_df = pd.DataFrame(list(state_expenditures.items()), columns=['State', '2021'
 # Save the new DataFrame to a csv file
 new_filepath = os.path.expanduser("~/Desktop/EconomicsPaper/State_Research.csv")
 new_df.to_csv(new_filepath, index=False)
-
