@@ -38,4 +38,5 @@ with open(csv_file_path, "w", newline="") as csvfile:
     writer.writerow(["State", "2017"])  # Write the header
     writer.writerows(zip(states, median_incomes))  # Write the data rows
 
+
 print("Data has been scraped and saved as a CSV file on the desktop.")
